@@ -1,22 +1,62 @@
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
+import TheNarvar from "@/components/TheNarvar.vue";
+import Footer from "@/components/Footer.vue";
+import { confirmarPago } from "@/services/reservaService";
+import Swal from "sweetalert2";
 
+const router = useRouter();
+const metodo = ref("");
+const isProcessing = ref(false);
 
-// Definimos el evento para avisarle al padre
-const emit = defineEmits(['confirmar-pago-final']);
-const metodo = ref(""); // Variable local para los radios
-
-function enviarConfirmacion() {
+async function enviarConfirmacion() {
   if (metodo.value === "") {
-    alert("Por favor, selecciona un método de pago");
+    Swal.fire({
+      title: 'Atención',
+      text: 'Por favor, selecciona un método de pago',
+      icon: 'warning',
+      confirmButtonColor: '#2e7d32'
+    });
     return;
   }
-  // Enviamos el valor al padre (ConfirmarPago)
-  emit('confirmar-pago-final', metodo.value);
+
+  isProcessing.value = true;
+
+  try {
+    const reservaTemp = JSON.parse(localStorage.getItem("reservaTemp") || "null");
+    const reservaId = localStorage.getItem("reservaBackendId") || reservaTemp?.id;
+
+    if (reservaId) {
+      await confirmarPago(reservaId);
+    }
+
+    Swal.fire({
+      title: 'Pago confirmado',
+      text: `Tu pago con ${metodo.value} ha sido procesado exitosamente.`,
+      icon: 'success',
+      confirmButtonColor: '#2e7d32'
+    }).then(() => {
+      router.push('/misreservas');
+    });
+  } catch (error) {
+    Swal.fire({
+      title: 'Error',
+      text: error.response?.data?.detail || 'No se pudo confirmar el pago. Intenta de nuevo.',
+      icon: 'error',
+      confirmButtonColor: '#2e7d32'
+    });
+  } finally {
+    isProcessing.value = false;
+  }
 }
 </script>
 
 <template>
+  <div style="background-color: var(--color-fondo-cafe);">
+    <TheNarvar />
+  </div>
+
   <main class="main-content d-flex justify-content-center align-items-center">
 
   <div class="form-card shadow">
@@ -48,8 +88,8 @@ function enviarConfirmacion() {
       </div>
     </div>
 
-    <button class="btn btn-verde w-100 py-2 fw-bold" @click="enviarConfirmacion">
-      PAGAR AHORA
+    <button class="btn btn-verde w-100 py-2 fw-bold" @click="enviarConfirmacion" :disabled="isProcessing">
+      {{ isProcessing ? 'Procesando...' : 'PAGAR AHORA' }}
     </button>
   </div>
 

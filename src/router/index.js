@@ -1,57 +1,123 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 
-// Import Layouts
-import PublicLayout from '@/layouts/PublicLayout.vue'
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import AppLayout from '@/layouts/AppLayout.vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
+// Importamos tus vistas
+import HomeEcohotel from '../views/HomeEcohotel.vue'
+import EventosView from '../views/EventosView.vue'
+import ReservaForm from '../views/ReservaForm.vue' // La vista de tus compañeros
+import ResumenReserva from '../views/ResumenReserva.vue' // La vista de tus compañeros
+import MisReservas from '../views/MisReservas.vue' // La vista de tus compañeros
+import RealizarCotizacion from '../views/RealizarCotizacion.vue' // La vista de tus compañeros
+import MetodoPago  from '../views/MetodoPago.vue'
+import ConfirmarPago from '../views/ConfirmarPago.vue'
+import Login from '../views/Login.vue' // Vista para iniciar sesión
+import Register from '../views/Register.vue' // Vista para registro de usuario
+import { useAuthStore } from '../stores/auth' // Store para gestión de autenticación
+
+// Admin
+import AdminLayout from '../layouts/AdminLayout.vue'
+import AdminDashboard from '../views/admin/AdminDashboard.vue'
+import AdminReservasView from '../views/admin/AdminReservasView.vue'
+import AdminCotizacionesView from '../views/admin/AdminCotizacionesView.vue'
+import AdminClientesView from '../views/admin/AdminClientesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // Rutas públicas
-    {
+
+        {
       path: '/',
-      component: PublicLayout,
-      children: [
-        { path: '', name: 'home', component: () => import('@/views/public/HomeEcohotel.vue') },
-        { path: 'eventos', name: 'eventos', component: () => import('@/views/public/EventosView.vue') },
-        { path: 'reservar', name: 'reserva', component: () => import('@/views/public/ReservaForm.vue') },
-        { path: 'cotizacion', name: 'RealizarCotizacionPublic', component: () => import('@/views/public/RealizarCotizacion.vue') },
-      ]
+      name: 'home',
+      component: HomeEcohotel,
+      meta: { requiresAuth: false }
     },
-    // Rutas de autenticación
     {
-      path: '/auth',
-      component: AuthLayout,
-      children: [
-        { path: 'login', name: 'login', component: () => import('@/views/auth/Login.vue') },
-        { path: 'register', name: 'register', component: () => import('@/views/auth/Register.vue') }
-      ]
+      path: '/register',
+      name: 'register',
+      component: Register
     },
-    // Rutas para usuarios logueados 'App'
+
     {
-      path: '/app',
-      component: AppLayout,
-      meta: { requiresAuth: true },
-      children: [
-        { path: 'misreservas', name: 'misreservas', component: () => import('@/views/app/MisReservas.vue') },
-        { path: 'resumen', name: 'ResumenReserva', component: () => import('@/views/public/ResumenReserva.vue') }, // Ajustado a la carpeta real
-        { path: 'confirmarpago', name: 'confirmarpago', component: () => import('@/views/public/ConfirmarPago.vue') },
-        { path: 'metodopago', name: 'metodopago', component: () => import('@/views/public/MetodoPago.vue') }
-      ]
-    },   
-    // Rutas de administrador
+      path: '/login',
+      name: 'login',
+      component: Login
+    },
+    {
+      path: '/eventos',
+      name: 'eventos',
+      component: EventosView,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/reservar',
+      name: 'reserva',
+      component: ReservaForm,
+      meta: { requiresAuth: false }
+    },
+
+    {
+    path: '/resumen',
+    name: 'ResumenReserva',
+    component: ResumenReserva,
+    meta: { requiresAuth: false }
+
+    },
+    {
+      path: '/misreservas',
+      name: 'misreservas',
+      component: MisReservas,
+      meta: { requiresAuth: false }
+    },
+
+    {
+    path: '/cotizacion',
+    name: 'RealizarCotizacion',
+    component: RealizarCotizacion,
+    meta: { requiresAuth: false }
+    },
+
+    {
+      path: '/confirmarpago',
+      name: 'confirmarpago',
+      component: ConfirmarPago,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/metodopago',
+      name: 'metodopago',
+      component: MetodoPago,
+      meta: { requiresAuth: false }
+    },
+
+    // Rutas de administracion
     {
       path: '/admin',
       component: AdminLayout,
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, requiresAdmin: true },
       children: [
-        // Ojo: verifica que estos nombres coincidan con tus archivos .vue en views/admin
-        { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/DashboardView.vue') },
-        { path: 'rooms', name: 'admin-rooms', component: () => import('@/views/admin/RoomsView.vue') }, 
-        { path: 'reservas', name: 'admin-reservas', component: () => import('@/views/admin/ReservationsView.vue') },
+        {
+          path: '',
+          redirect: '/admin/dashboard'
+        },
+        {
+          path: 'dashboard',
+          name: 'admin-dashboard',
+          component: AdminDashboard
+        },
+        {
+          path: 'reservas',
+          name: 'admin-reservas',
+          component: AdminReservasView
+        },
+        {
+          path: 'cotizaciones',
+          name: 'admin-cotizaciones',
+          component: AdminCotizacionesView
+        },
+        {
+          path: 'clientes',
+          name: 'admin-clientes',
+          component: AdminClientesView
+        }
       ]
     }
   ]
@@ -59,14 +125,22 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  const isAuthRequired = to.matched.some(record => record.meta.requiresAuth)
 
-  if (isAuthRequired && !authStore.isLogged) {
+  // 1. Si la ruta necesita login (como Reservar o Pagar) y NO está logueado
+  if (to.matched.some(record => record.meta.requiresAuth) && !authStore.isLogged) {
+    // Lo mandamos al login, guardando a dónde quería ir originalmente
     next({ name: 'login', query: { redirect: to.fullPath } })
-  } else if ((to.name === 'login' || to.name === 'register') && authStore.isLogged) {
-    // Aquí puedes cambiarlo para que lo mande a 'misreservas' en lugar de 'home'
-    next({ name: 'misreservas' }) 
-  } else {
+  }
+  // 2. Si la ruta necesita rol admin y el usuario no es admin
+  else if (to.matched.some(record => record.meta.requiresAdmin) && !authStore.isAdmin) {
+    next({ name: 'home' })
+  }
+  // 3. Si el usuario YA ESTÁ logueado y trata de entrar a Login o Register
+  else if ((to.name === 'login' || to.name === 'register') && authStore.isLogged) {
+    next({ name: 'home' })
+  }
+  // 4. En cualquier otro caso, dejarlo pasar
+  else {
     next()
   }
 })

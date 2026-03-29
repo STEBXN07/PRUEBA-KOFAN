@@ -1,18 +1,49 @@
 <script setup>
 import { ref } from "vue";
-import MensajeConfirmacion from "../../components/MensajeConfirmacion.vue";
-import { useAuthStore } from '../../stores/auth'; // Para el "Hola, Usuario"
+import TheNarvar from '../components/TheNarvar.vue';
+import MensajeConfirmacion from "../components/MensajeConfirmacion.vue";
+import Footer from '@/components/Footer.vue';
+import { useAuthStore } from '../stores/auth';
+import { confirmarPago as confirmarPagoApi } from '@/services/reservaService';
+import Swal from 'sweetalert2';
 
 const authStore = useAuthStore();
 const metodoSeleccionado = ref("");
 const confirmado = ref(false);
+const isProcessing = ref(false);
 
-function confirmarPago() {
+async function confirmarPago() {
   if (metodoSeleccionado.value === "") {
-    alert("Por favor, selecciona un método de pago");
+    Swal.fire({
+      title: 'Atención',
+      text: 'Por favor, selecciona un método de pago',
+      icon: 'warning',
+      confirmButtonColor: '#2e7d32'
+    });
     return;
   }
-  confirmado.value = true;
+
+  isProcessing.value = true;
+
+  try {
+    const reservaTemp = JSON.parse(localStorage.getItem("reservaTemp") || "null");
+    const reservaId = localStorage.getItem("reservaBackendId") || reservaTemp?.id;
+
+    if (reservaId) {
+      await confirmarPagoApi(reservaId, metodoSeleccionado.value.toUpperCase());
+    }
+
+    confirmado.value = true;
+  } catch (error) {
+    Swal.fire({
+      title: 'Error',
+      text: error.response?.data?.detail || 'No se pudo confirmar el pago. Intenta de nuevo.',
+      icon: 'error',
+      confirmButtonColor: '#2e7d32'
+    });
+  } finally {
+    isProcessing.value = false;
+  }
 }
 
 function volver() {
@@ -22,6 +53,9 @@ function volver() {
 </script>
 
 <template>
+  <div style="background-color: var(--color-fondo-cafe);">
+    <TheNarvar />
+  </div>
 
     <main class="main-content d-flex justify-content-center align-items-center">
 
@@ -47,8 +81,8 @@ function volver() {
           </div>
         </div>
 
-        <button class="btn  w-100 py-2 fw-bold" @click="confirmarPago">
-          CONFIRMAR PAGO
+        <button class="btn  w-100 py-2 fw-bold" @click="confirmarPago" :disabled="isProcessing">
+          {{ isProcessing ? 'Procesando...' : 'CONFIRMAR PAGO' }}
         </button>
       </div>
 
@@ -57,7 +91,10 @@ function volver() {
         :metodo="metodoSeleccionado" 
         @volver="volver" 
       />
-    </main>  
+    </main>
+
+    <Footer />
+  
 </template>
 
 <style scoped>

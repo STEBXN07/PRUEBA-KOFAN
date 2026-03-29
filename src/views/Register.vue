@@ -48,23 +48,43 @@
             </div>
           </transition>
 
-          <!-- Nombre completo -->
-          <div class="form-group" :class="{ 'has-error': errors.fullName, 'is-focused': focused.fullName || fullName }">
+          <!-- Nombres -->
+          <div class="form-group" :class="{ 'has-error': errors.names, 'is-focused': focused.names || names }">
             <div class="input-wrapper">
               <i class="bi bi-person input-icon"></i>
               <input
-                v-model="fullName"
+                v-model="names"
                 type="text"
-                id="reg-name"
+                id="reg-names"
                 required
-                autocomplete="name"
-                @focus="focused.fullName = true"
-                @blur="focused.fullName = false; validateField('fullName')"
+                autocomplete="given-name"
+                @focus="focused.names = true"
+                @blur="focused.names = false; validateField('names')"
               />
-              <label for="reg-name">Nombre completo</label>
+              <label for="reg-names">Nombres</label>
             </div>
             <transition name="slide-down">
-              <span v-if="errors.fullName" class="field-error">{{ errors.fullName }}</span>
+              <span v-if="errors.names" class="field-error">{{ errors.names }}</span>
+            </transition>
+          </div>
+
+          <!-- Apellidos -->
+          <div class="form-group" :class="{ 'has-error': errors.surnames, 'is-focused': focused.surnames || surnames }">
+            <div class="input-wrapper">
+              <i class="bi bi-person input-icon"></i>
+              <input
+                v-model="surnames"
+                type="text"
+                id="reg-surnames"
+                required
+                autocomplete="family-name"
+                @focus="focused.surnames = true"
+                @blur="focused.surnames = false; validateField('surnames')"
+              />
+              <label for="reg-surnames">Apellidos</label>
+            </div>
+            <transition name="slide-down">
+              <span v-if="errors.surnames" class="field-error">{{ errors.surnames }}</span>
             </transition>
           </div>
 
@@ -169,11 +189,11 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import Swal from 'sweetalert2'
+import { useAuthStore } from '../stores/auth'
 
-const auth = useAuthStore()
-const fullName = ref('')
+const names = ref('')
+const surnames = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -182,9 +202,10 @@ const showConfirmPassword = ref(false)
 const isLoading = ref(false)
 const errorMsg = ref('')
 const router = useRouter()
+const auth = useAuthStore()
 
-const focused = reactive({ fullName: false, email: false, password: false, confirmPassword: false })
-const errors = reactive({ fullName: '', email: '', password: '', confirmPassword: '' })
+const focused = reactive({ names: false, surnames: false, email: false, password: false, confirmPassword: false })
+const errors = reactive({ names: '', surnames: '', email: '', password: '', confirmPassword: '' })
 
 // Password strength
 const passwordStrength = computed(() => {
@@ -205,8 +226,11 @@ const strengthLabel = computed(() => ['Muy débil', 'Débil', 'Media', 'Fuerte',
 
 function validateField(field) {
   switch (field) {
-    case 'fullName':
-      errors.fullName = !fullName.value.trim() ? 'El nombre es obligatorio' : ''
+    case 'names':
+      errors.names = !names.value.trim() ? 'Los nombres son obligatorios' : ''
+      break
+    case 'surnames':
+      errors.surnames = !surnames.value.trim() ? 'Los apellidos son obligatorios' : ''
       break
     case 'email':
       if (!email.value) {
@@ -241,11 +265,12 @@ function validateField(field) {
 }
 
 function validateAll() {
-  validateField('fullName')
+  validateField('names')
+  validateField('surnames')
   validateField('email')
   validateField('password')
   validateField('confirmPassword')
-  return !errors.fullName && !errors.email && !errors.password && !errors.confirmPassword
+  return !errors.names && !errors.surnames && !errors.email && !errors.password && !errors.confirmPassword
 }
 
 async function submit() {
@@ -253,26 +278,28 @@ async function submit() {
   if (!validateAll()) return
 
   isLoading.value = true
-  await new Promise(r => setTimeout(r, 800))
 
-  const userData = {
-    fullName: fullName.value.trim(),
-    email: email.value.trim(),
+  const result = await auth.register({
+    names: names.value.trim(),
+    surnames: surnames.value.trim(),
+    email: email.value,
     password: password.value
-  }
-  localStorage.setItem('tempUser', JSON.stringify(userData))
-  auth.login(email.value, password.value) // Se llama al login directamente
+  })
 
   isLoading.value = false
 
-  Swal.fire({
-    title: '¡Cuenta creada!',
-    text: 'Tu cuenta ha sido creada exitosamente. Ahora puedes iniciar sesión.',
-    icon: 'success',
-    confirmButtonColor: '#2e7d32'
-  }).then(() => {
-    router.push({ name: 'misreservas' })
-  })
+  if (result.success) {
+    Swal.fire({
+      title: '¡Cuenta creada!',
+      text: 'Tu cuenta ha sido creada exitosamente. Ahora puedes iniciar sesión.',
+      icon: 'success',
+      confirmButtonColor: '#2e7d32'
+    }).then(() => {
+      router.push('/login')
+    })
+  } else {
+    errorMsg.value = result.message || 'Error al crear la cuenta. Intenta de nuevo.'
+  }
 }
 </script>
 

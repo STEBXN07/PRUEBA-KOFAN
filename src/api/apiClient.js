@@ -1,22 +1,37 @@
-import axios from "axios";
-
-const base = import.meta.env.VITE_BACKEND_URL;
+import axios from 'axios'
+import router from '@/router'
 
 const apiClient = axios.create({
-    baseURL: base,
-    headers: {
-        'Content-Type': 'application/json',
-    },})
-//Agregar un interceptor para agregar el token de autenticacion a cada solicitud
-apiClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    const tokenType = localStorage.getItem('token_type');
-    if (token && tokenType) {
-        config.headers['Authorization'] = `${tokenType} ${token}`;
-    }
-    return config;
-}, (error) => {
-    return Promise.reject(error);
-});
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
 
-export default apiClient;
+// Request interceptor: inyecta el token JWT en cada peticion
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+// Response interceptor: maneja 401 (token expirado/invalido)
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response && error.response.status === 401) {
+      const { useAuthStore } = await import('@/stores/auth')
+      const authStore = useAuthStore()
+      authStore.logout()
+      router.push({ name: 'login' })
+    }
+    return Promise.reject(error)
+  }
+)
+
+export default apiClient

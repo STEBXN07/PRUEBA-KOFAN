@@ -147,19 +147,28 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-import { useAuthStore } from '../../stores/auth'
+import { useAuthStore } from '../stores/auth'
 
 const email = ref('')
 const password = ref('')
 const remember = ref(false)
+
+onMounted(() => {
+  const saved = JSON.parse(localStorage.getItem('rememberLogin') || 'null')
+  if (saved && saved.email) {
+    email.value = saved.email
+    remember.value = true
+  }
+})
 const showPassword = ref(false)
 const isLoading = ref(false)
 const errorMsg = ref('')
 const auth = useAuthStore()
 const router = useRouter()
+
 const focused = reactive({ email: false, password: false })
 const errors = reactive({ email: '', password: '' })
 
@@ -189,20 +198,18 @@ async function submit() {
   if (!validateAll()) return
 
   isLoading.value = true
-  // Simular delay de red
-  await new Promise(r => setTimeout(r, 600))
 
-  const ok = auth.login(email.value, password.value)
+  const result = await auth.login(email.value, password.value)
   isLoading.value = false
 
-  if (ok) {
+  if (result.success) {
     if (remember.value) {
       localStorage.setItem('rememberLogin', JSON.stringify({ email: email.value }))
     }
-    const redirectPatch = router.query.redirect || { name: 'misreservas' }
-    router.push(redirectPatch)
+    const redirect = router.currentRoute.value.query.redirect || '/'
+    router.push(redirect)
   } else {
-    errorMsg.value = 'Credenciales inválidas. Verifica tu correo y contraseña.'
+    errorMsg.value = result.message || 'Credenciales inválidas. Verifica tu correo y contraseña.'
   }
 }
 

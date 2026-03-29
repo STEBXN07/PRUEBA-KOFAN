@@ -1,40 +1,36 @@
-// src/services/authService.js
-import apiClient from "@/api/apiClient";
+import apiClient from '@/api/apiClient'
 
-// LOGIN
-export const login = async (credentials) => {
-  const formData = new URLSearchParams();
-  formData.append("username", credentials.username);
-  formData.append("password", credentials.password);
+/**
+ * Registrar un nuevo usuario.
+ * POST /auth/register
+ * Body: { names, surnames, email, password, document_type?, document_number? }
+ */
+export async function register(userData) {
+  const response = await apiClient.post('/auth/register', userData)
+  return response.data
+}
 
-  const response = await apiClient.post("/auth/login", formData, {
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  });
+/**
+ * Iniciar sesion.
+ * POST /auth/login (OAuth2PasswordRequestForm = form-urlencoded)
+ * Retorna: { access_token, refresh_token, token_type }
+ */
+export async function login(email, password) {
+  const formData = new URLSearchParams()
+  formData.append('username', email)
+  formData.append('password', password)
 
-  const { access_token, refresh_token, token_type } = response.data;
+  const response = await apiClient.post('/auth/login', formData, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  })
+  return response.data
+}
 
-  localStorage.setItem("token", access_token);
-  localStorage.setItem("refresh_token", refresh_token);
-  localStorage.setItem("token_type", token_type);
-
-  return response.data;
-};
-
-// OBTENER PERFIL
-export const getUserProfile = async () => {
-  const response = await apiClient.get("/users/me");
-  return response.data;
-};
-
-// LOGOUT
-export const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("refresh_token");
-  localStorage.removeItem("token_type");
-};
-
-// REGISTRO USUARIO GUEST
-export const register = async (userData) => {
-  const response = await apiClient.post("/auth/register", userData);
-  return response.data;
-};
+/**
+ * Obtener datos del usuario autenticado.
+ * GET /users/me
+ */
+export async function getMe() {
+  const response = await apiClient.get('/users/me')
+  return response.data
+}
