@@ -1,0 +1,53 @@
+:root {
+        --verde: #2e7d32;
+        --cafe: #5d4037;
+        --gris-claro: #f8f9fa;
+    }
+
+    body {
+        background-color: var(--gris-claro);
+    }
+
+    header {
+        background-color: var(--cafe);
+        color: white;
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    .form-card {
+        background-color: white;
+        border-radius: 1rem;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        padding: 2rem;
+    }
+
+    .btn-verde {
+        background-color: var(--verde);
+        color: white;
+    }
+    .btn-verde:hover {
+        background-color: #256428;
+    }
+
+    .btn-cafe {
+        background-color: var(--cafe);
+        color: white;
+    }
+    .btn-cafe:hover {
+        background-color: #4e342e;
+    }
+
+    @media (max-width: 576px) {
+    .container {
+    width: 100%;
+    max-width: none;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    }
+
+    .form-card {
+    border-radius: 0;
+    box-shadow: none;
+    }
+}

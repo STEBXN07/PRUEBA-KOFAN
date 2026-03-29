@@ -1,108 +1,74 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-// Layouts
+// Import Layouts
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 
-// Views
-import HomeView from '@/views/public/HomeView.vue'
-import LoginView from '@/views/auth/LoginView.vue'
-import RegisterView from '@/views/auth/RegisterView.vue'
-import ProfileView from '@/views/app/ProfileView.vue'
-import DashboardView from '@/views/admin/DashboardView.vue'
-import ReservationsView from '@/views/admin/ReservationsView.vue'
-import RoomsPublicView from '@/views/public/RoomsPublicView.vue'
-import RoomsViewAdmin from '@/views/admin/RoomsView.vue'
-
-const routes = [
-
-  // PUBLICO
-  {
-    path: '/',
-    component: PublicLayout,
-    children: [
-      { path: '', name: 'home', component: HomeView },
-      {
-        path: "gallery",
-        name: 'home-gallery',
-        component: () => import('@/views/public/GalleryView.vue')//carga perezosa o dinamica
-      },
-      { 
-        path: 'rooms', 
-        name: 'public-rooms', 
-        component: RoomsPublicView 
-      },
-      { 
-        path: 'rooms/:id', 
-        name: 'room-detail', 
-        component: () => import('@/views/public/RoomDetailView.vue') 
-      },
-    ]
-  },
-
-  // AUTH
-  {
-    path: '/',
-    component: AuthLayout,
-    children: [
-      { path: 'login', name: 'login', component: LoginView },      
-      { path: 'register', name: 'register', component: () => import('@/views/auth/RegisterView.vue')},//carga perezosa o dinamica
-      { path: 'forgot-password', name: 'forgot_password', component: () => import('@/views/auth/ForgotPasswordView.vue')}
-    ]
-  },
-
-  // USUARIO
-  {
-    path: '/app',
-    component: AppLayout,
-    children: [
-      { path: 'profile', name: 'profile', component: ProfileView }
-    ]
-  },
-
-  // ADMIN
-  {
-    path: '/admin',
-    component: AdminLayout,
-    children: [
-      { path: 'dashboard', 
-        name: 'admin-dashboard', 
-        component: DashboardView }
-      ,
-      { path: 'users', 
-        name: 'admin-users',
-        component: () => import('@/views/admin/UsersView.vue')//carga perezosa o dinamica
-      },
-      {
-        path: "gallery",
-        name: 'admin-gallery',
-        component: () => import('@/views/admin/GalleryAdminView.vue')//carga perezosa o dinamica
-      },
-      {
-        path: "reservations",
-        name: 'admin-reservations',
-        component: ReservationsView
-      },
-      {
-        path: "rooms",
-        name: 'admin-rooms',
-        component: RoomsViewAdmin
-      },
-      {
-        path: 'config',
-        name: 'admin-config',
-        component: () => import('@/views/admin/ConfigView.vue')
-      }
-    ]
-  }
-
-]
-
 const router = createRouter({
-  history: createWebHistory(),
-  routes
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    // Rutas públicas
+    {
+      path: '/',
+      component: PublicLayout,
+      children: [
+        { path: '', name: 'home', component: () => import('@/views/public/HomeEcohotel.vue') },
+        { path: 'eventos', name: 'eventos', component: () => import('@/views/public/EventosView.vue') },
+        { path: 'reservar', name: 'reserva', component: () => import('@/views/public/ReservaForm.vue') },
+        { path: 'cotizacion', name: 'RealizarCotizacionPublic', component: () => import('@/views/public/RealizarCotizacion.vue') },
+      ]
+    },
+    // Rutas de autenticación
+    {
+      path: '/auth',
+      component: AuthLayout,
+      children: [
+        { path: 'login', name: 'login', component: () => import('@/views/auth/Login.vue') },
+        { path: 'register', name: 'register', component: () => import('@/views/auth/Register.vue') }
+      ]
+    },
+    // Rutas para usuarios logueados 'App'
+    {
+      path: '/app',
+      component: AppLayout,
+      meta: { requiresAuth: true },
+      children: [
+        { path: 'misreservas', name: 'misreservas', component: () => import('@/views/app/MisReservas.vue') },
+        { path: 'resumen', name: 'ResumenReserva', component: () => import('@/views/public/ResumenReserva.vue') }, // Ajustado a la carpeta real
+        { path: 'confirmarpago', name: 'confirmarpago', component: () => import('@/views/public/ConfirmarPago.vue') },
+        { path: 'metodopago', name: 'metodopago', component: () => import('@/views/public/MetodoPago.vue') }
+      ]
+    },   
+    // Rutas de administrador
+    {
+      path: '/admin',
+      component: AdminLayout,
+      meta: { requiresAuth: true },
+      children: [
+        // Ojo: verifica que estos nombres coincidan con tus archivos .vue en views/admin
+        { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/DashboardView.vue') },
+        { path: 'rooms', name: 'admin-rooms', component: () => import('@/views/admin/RoomsView.vue') }, 
+        { path: 'reservas', name: 'admin-reservas', component: () => import('@/views/admin/ReservationsView.vue') },
+      ]
+    }
+  ]
+})
+
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  const isAuthRequired = to.matched.some(record => record.meta.requiresAuth)
+
+  if (isAuthRequired && !authStore.isLogged) {
+    next({ name: 'login', query: { redirect: to.fullPath } })
+  } else if ((to.name === 'login' || to.name === 'register') && authStore.isLogged) {
+    // Aquí puedes cambiarlo para que lo mande a 'misreservas' en lugar de 'home'
+    next({ name: 'misreservas' }) 
+  } else {
+    next()
+  }
 })
 
 export default router

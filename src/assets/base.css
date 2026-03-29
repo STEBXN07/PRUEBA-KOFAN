@@ -1,0 +1,133 @@
+
+
+:root {
+    --color-fondo-cafe: #8a7945;
+    --color-boton-cafe: #9f8f5b;
+}
+
+
+html, body, #app {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Estilos de la Columna Izquierda */
+.hero-text-column {
+    background-color: var(--color-fondo-cafe) !important; 
+    color: white;
+    min-height: 100vh; 
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    margin-right: 15px;
+}
+
+.navbar-dark .navbar-nav .nav-link.active,
+.navbar-dark .navbar-nav .nav-link:hover {
+    color: white;
+}
+
+.nav-btn-buzon {
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    padding: 4px 12px !important;
+    border-radius: 4px;
+    margin-left: 10px;
+}
+
+.nav-btn-buzon:hover {
+    background-color: white;
+    color: var(--color-fondo-cafe) !important;
+}
+
+
+.hero-content h1 {
+    margin-bottom: 0;
+}
+.hero-content .lead {
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 0.5rem;
+}
+.hero-content p {
+    max-width: 450px;
+}
+
+
+.btn-custom {
+    background-color: var(--color-boton-cafe);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border-radius: 0;
+}
+
+.btn-custom:hover {
+    background-color: #b5a56d;
+    color: white;
+}
+
+/* Columna Derecha (Imagen) */
+.hero-image-column {
+    background: url('https://i.imgur.com/8N4p4n1.jpeg') no-repeat center center;
+    background-size: cover;
+    position: relative; 
+    min-height: 400px;
+}
+
+.overlay-logo {
+    position: absolute;
+    top: 40px;
+    right: 40px;
+    width: 120px; 
+}
+
+.decorative-line-v {
+    position: absolute;
+    left: 20px;
+    top: 15%;
+    width: 2px;
+    height: 70%;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.decorative-line-h {
+    position: absolute;
+    top: 30%;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 991.98px) { 
+    .hero-text-column {
+        min-height: auto; 
+    }
+    .vh-100 {
+        height: auto !important;
+    }
+    .hero-content {
+        padding-top: 4rem !important;
+        padding-bottom: 4rem !important;
+        text-align: center;
+        align-items: center;
+    }
+    .navbar-nav {
+        text-align: center;
+        padding-top: 20px;
+    }
+    .decorative-line-v, .decorative-line-h {
+        display: none;
+    }
+    .overlay-logo {
+        top: 20px;
+        right: 20px;
+        width: 100px;
+    }
+}
