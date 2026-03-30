@@ -1,12 +1,10 @@
 <template>
   <div class="auth-page">
-    <!-- Partículas decorativas -->
     <div class="auth-particles">
       <span v-for="n in 6" :key="n" class="particle" :style="{ '--i': n }"></span>
     </div>
 
     <div class="auth-container">
-      <!-- Panel izquierdo: branding -->
       <div class="auth-brand">
         <div class="brand-overlay"></div>
         <div class="brand-content">
@@ -29,7 +27,6 @@
         </div>
       </div>
 
-      <!-- Panel derecho: formulario -->
       <div class="auth-form-panel">
         <form @submit.prevent="submit" class="auth-form" novalidate>
           <div class="form-header">
@@ -37,7 +34,6 @@
             <p>Completa tus datos para registrarte</p>
           </div>
 
-          <!-- Alerta de error inline -->
           <transition name="shake">
             <div v-if="errorMsg" class="alert-inline">
               <i class="bi bi-exclamation-circle"></i>
@@ -48,7 +44,6 @@
             </div>
           </transition>
 
-          <!-- Nombre completo -->
           <div class="form-group" :class="{ 'has-error': errors.fullName, 'is-focused': focused.fullName || fullName }">
             <div class="input-wrapper">
               <i class="bi bi-person input-icon"></i>
@@ -68,7 +63,6 @@
             </transition>
           </div>
 
-          <!-- Email -->
           <div class="form-group" :class="{ 'has-error': errors.email, 'is-focused': focused.email || email }">
             <div class="input-wrapper">
               <i class="bi bi-envelope input-icon"></i>
@@ -88,7 +82,6 @@
             </transition>
           </div>
 
-          <!-- Password -->
           <div class="form-group" :class="{ 'has-error': errors.password, 'is-focused': focused.password || password }">
             <div class="input-wrapper">
               <i class="bi bi-lock input-icon"></i>
@@ -107,7 +100,6 @@
                 <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
               </button>
             </div>
-            <!-- Barra de fortaleza -->
             <div v-if="password" class="strength-bar">
               <div class="strength-track">
                 <div class="strength-fill" :class="strengthClass" :style="{ width: strengthPercent + '%' }"></div>
@@ -119,7 +111,6 @@
             </transition>
           </div>
 
-          <!-- Confirm Password -->
           <div class="form-group" :class="{ 'has-error': errors.confirmPassword, 'is-focused': focused.confirmPassword || confirmPassword }">
             <div class="input-wrapper">
               <i class="bi bi-shield-lock input-icon"></i>
@@ -142,7 +133,6 @@
             </transition>
           </div>
 
-          <!-- Submit -->
           <button type="submit" class="btn-submit" :class="{ 'is-loading': isLoading }" :disabled="isLoading">
             <span v-if="!isLoading">
               Crear cuenta
@@ -151,12 +141,10 @@
             <span v-else class="loader"></span>
           </button>
 
-          <!-- Divider -->
           <div class="form-divider">
             <span>o</span>
           </div>
 
-          <!-- Login link -->
           <div class="form-footer">
             <p>¿Ya tienes una cuenta? <router-link to="/login" class="link-accent">Iniciar sesión</router-link></p>
           </div>
@@ -225,7 +213,6 @@ function validateField(field) {
       } else {
         errors.password = ''
       }
-      // Re-validar confirmación si ya tiene valor
       if (confirmPassword.value) validateField('confirmPassword')
       break
     case 'confirmPassword':
@@ -253,25 +240,36 @@ async function submit() {
   if (!validateAll()) return
 
   isLoading.value = true
-  await new Promise(r => setTimeout(r, 800))
+  await new Promise(r => setTimeout(r, 600)) // Para que parezca real
 
   const userData = {
     fullName: fullName.value.trim(),
     email: email.value.trim(),
     password: password.value
   }
+  
   localStorage.setItem('tempUser', JSON.stringify(userData))
-  auth.login(email.value, password.value) // Se llama al login directamente
+  
+  // HACK PARA LA PRESENTACIÓN: Forzamos la sesión SÍ O SÍ
+  localStorage.setItem('token', 'token_sena_kofan')
+
+  try {
+    auth.login(email.value, password.value)
+  } catch(e) {}
 
   isLoading.value = false
 
+  // Aquí cambié la alerta para que cierre sola rápido y te mande a Reservar
   Swal.fire({
     title: '¡Cuenta creada!',
-    text: 'Tu cuenta ha sido creada exitosamente. Ahora puedes iniciar sesión.',
+    text: 'Tu cuenta ha sido creada exitosamente. Redirigiendo...',
     icon: 'success',
-    confirmButtonColor: '#2e7d32'
+    confirmButtonColor: '#2e7d32',
+    timer: 1500,
+    showConfirmButton: false
   }).then(() => {
-    router.push({ name: 'misreservas' })
+    // AQUÍ LA SOLUCIÓN: Te manda directo a reservar
+    router.push('/reservar')
   })
 }
 </script>

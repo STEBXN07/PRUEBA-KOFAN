@@ -1,336 +1,136 @@
 <script setup>
-import TheNarvar from '@/components/TheNarvar.vue'
+import TheNarvar from '../components/TheNarvar.vue'
 import Footer from '@/components/Footer.vue'
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import Swal from 'sweetalert2'
 import { crearReserva, listarSalones, getOcupacion } from '@/services/reservaService'
-import { crearCotizacionFormulario } from '@/services/cotizacionService'
+//import { crearCotizacionFormulario } from '@/services/cotizacionService'
 
 const router = useRouter();
 const salones = ref([])
 const salonSeleccionado = ref("")
 const isSubmitting = ref(false)
 
-//Datos del formulario
+// Datos del formulario (Asegúrate de que estos nombres se usen en el <template>)
 const fecha = ref("");
 const destino = ref("");
-const evento = ref("");
+const evento = ref(""); // Tipo de evento (Boda, Reunion, etc.)
 const personas = ref(1);
 const elementos = ref([]);
 const total = ref("150000");
 
+// Datos del cliente
 const cliente = ref({
   tipoPersona: "",
-
-  // Persona Natural
   nombreCompleto: "",
   cedula: "",
-
-  // Persona Jurídica
   razonSocial: "",
   nit: "",
   representanteLegal: "",
-
-  // Comunes
   telefono: "",
   email: ""
 });
 
 const loaded = ref(false)
-
-// ── Occupied dates state ──
-const fechasOcupadas = ref(new Map()) // Map<dateStr, { color, title }>
+const fechasOcupadas = ref(new Map())
 const loadingOcupacion = ref(false)
+async function enviarFormulario() {
+  if (isSubmitting.value) return
+  
+  // 1. Verificamos que las variables tengan algo antes de enviar
+  if (!fecha.value) {
+    Swal.fire('Error', 'No has seleccionado una fecha en el calendario', 'warning')
+    return
+  }
+  if (!salonSeleccionado.value) {
+    Swal.fire('Error', 'Por favor selecciona un salón en la lista', 'warning')
+    return
+  }
 
-// Watch salon changes to fetch occupied dates
-watch(salonSeleccionado, async (newSalonId) => {
-  fechasOcupadas.value = new Map()
+  isSubmitting.value = true
 
-  if (!newSalonId) return
-
-  loadingOcupacion.value = true
   try {
-    const ocupacion = await getOcupacion(newSalonId)
-    const mapa = new Map()
-    for (const reserva of ocupacion) {
-      // Extract the date part (YYYY-MM-DD) from the start datetime
-      const dateStr = reserva.start ? reserva.start.split('T')[0] : null
-      if (dateStr) {
-        mapa.set(dateStr, {
-          color: reserva.color || 'red',
-          title: reserva.title || 'Ocupado'
-        })
-      }
+    // 2. Armamos el objeto asegurando que NADA sea undefined
+    const backendReserva = {
+      salon_id: String(salonSeleccionado.value),
+      nombre_evento: String(evento.value || "Reserva Ecohotel Kofán"),
+      fecha_inicio: String(fecha.value) + "T10:00:00",
+      fecha_fin: String(fecha.value) + "T20:00:00"
     }
-    fechasOcupadas.value = mapa
-  } catch {
-    // Silently fail — calendar will show no occupied dates
-    fechasOcupadas.value = new Map()
-  } finally {
-    loadingOcupacion.value = false
-  }
 
-  // If the currently selected date is now occupied, clear the selection
-  if (fecha.value && fechasOcupadas.value.has(fecha.value)) {
-    fecha.value = ''
+    // --- ESTO ES CLAVE: Míralo en la consola (F12) para ver qué se envía ---
+    console.log("PAQUETE A ENVIAR:", backendReserva)
+
+    const result = await crearReserva(backendReserva)
+    
     Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'warning',
-      title: 'La fecha seleccionada no está disponible para este salón',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true
+      title: '¡Logrado!',
+      text: 'Reserva guardada en la base de datos',
+      icon: 'success',
+      confirmButtonColor: '#2e7d32'
+    }).then(() => {
+      router.push("/resumen");
     })
-  }
-})
 
-// ── Calendar state ──
+  } catch (error) {
+    // 3. Si falla, el Backend nos dirá exactamente QUÉ campo odia
+    console.error("EL BACKEND RECHAZÓ ESTO:", error.response?.data)
+    
+    let mensajeError = 'Error de validación (422)'
+    if (error.response?.data?.detail) {
+      const d = error.response.data.detail[0]
+      mensajeError = `Campo [${d.loc[1]}]: ${d.msg}`
+    }
+
+    Swal.fire({
+      title: 'Error de Datos',
+      text: mensajeError,
+      icon: 'error'
+    })
+  } finally {
+    isSubmitting.value = false
+  }
+}
+// Calendario logic (Mantén tus funciones originales)
 const today = new Date()
 const calYear = ref(today.getFullYear())
 const calMonth = ref(today.getMonth())
-
-const monthNames = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-]
+const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const dayLabels = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do']
 
 const calendarDays = computed(() => {
-  const y = calYear.value
-  const m = calMonth.value
-  const firstDay = new Date(y, m, 1)
-  const lastDay = new Date(y, m + 1, 0)
-
-  // Monday = 0 ... Sunday = 6
+  const y = calYear.value, m = calMonth.value
+  const firstDay = new Date(y, m, 1), lastDay = new Date(y, m + 1, 0)
   let startDow = firstDay.getDay() - 1
   if (startDow < 0) startDow = 6
-
   const days = []
-
-  // Previous month filler
   const prevLast = new Date(y, m, 0).getDate()
-  for (let i = startDow - 1; i >= 0; i--) {
-    days.push({ day: prevLast - i, current: false, dateStr: '' })
-  }
-
-  // Current month
+  for (let i = startDow - 1; i >= 0; i--) days.push({ day: prevLast - i, current: false, dateStr: '' })
   for (let d = 1; d <= lastDay.getDate(); d++) {
-    const mm = String(m + 1).padStart(2, '0')
-    const dd = String(d).padStart(2, '0')
+    const mm = String(m + 1).padStart(2, '0'), dd = String(d).padStart(2, '0')
     days.push({ day: d, current: true, dateStr: `${y}-${mm}-${dd}` })
   }
-
-  // Next month filler
-  const remaining = 7 - (days.length % 7)
-  if (remaining < 7) {
-    for (let i = 1; i <= remaining; i++) {
-      days.push({ day: i, current: false, dateStr: '' })
-    }
-  }
-
   return days
 })
 
-const todayStr = computed(() => {
-  const mm = String(today.getMonth() + 1).padStart(2, '0')
-  const dd = String(today.getDate()).padStart(2, '0')
-  return `${today.getFullYear()}-${mm}-${dd}`
-})
-
-const selectedDateDisplay = computed(() => {
-  if (!fecha.value) return null
-  const [y, m, d] = fecha.value.split('-')
-  return `${parseInt(d)} de ${monthNames[parseInt(m) - 1]} ${y}`
-})
-
-function calPrev() {
-  if (calMonth.value === 0) {
-    calMonth.value = 11
-    calYear.value--
-  } else {
-    calMonth.value--
-  }
-}
-
-function calNext() {
-  if (calMonth.value === 11) {
-    calMonth.value = 0
-    calYear.value++
-  } else {
-    calMonth.value++
-  }
-}
-
 function selectDay(d) {
-  if (!d.current || !d.dateStr) return
-  if (isPast(d.dateStr)) return
-
-  if (isOccupied(d.dateStr)) {
-    const info = getOccupiedInfo(d.dateStr)
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'error',
-      title: `Fecha no disponible: ${info?.title || 'Ocupado'}`,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true
-    })
-    return
-  }
-
-  fecha.value = d.dateStr
+  if (d.current && d.dateStr) fecha.value = d.dateStr
 }
+function calPrev() { calMonth.value === 0 ? (calMonth.value = 11, calYear.value--) : calMonth.value-- }
+function calNext() { calMonth.value === 11 ? (calMonth.value = 0, calYear.value++) : calMonth.value++ }
 
-function isPast(dateStr) {
-  return dateStr < todayStr.value
-}
-
-function isOccupied(dateStr) {
-  return dateStr && fechasOcupadas.value.has(dateStr)
-}
-
-function getOccupiedInfo(dateStr) {
-  return fechasOcupadas.value.get(dateStr) || null
-}
-
-//cargar datos guardados y salones al montar el componente
 onMounted(async () => {
-  // Cargar salones desde el backend
-  try {
-    salones.value = await listarSalones()
-  } catch {
-    salones.value = []
-  }
-
-  const datosGuardados = localStorage.getItem("reservaTemp");
-
-  if (datosGuardados) {
-    const reserva = JSON.parse(datosGuardados);
-
-    fecha.value = reserva.fecha || "";
-    destino.value = reserva.destino || "";
-    evento.value = reserva.evento || "";
-    personas.value = reserva.personas || 1;
-    cliente.value = { ...cliente.value, ...(reserva.cliente || {}) };
-    elementos.value = reserva.elementos || [];
-    total.value = reserva.total || "150000";
-    salonSeleccionado.value = reserva.salon_id || "";
-
-    // Sync calendar to saved date
-    if (fecha.value) {
-      const [y, m] = fecha.value.split('-')
-      calYear.value = parseInt(y)
-      calMonth.value = parseInt(m) - 1
-    }
-  }
-
+  try { salones.value = await listarSalones() } catch { salones.value = [] }
   setTimeout(() => { loaded.value = true }, 80)
-});
-
-async function enviarFormulario() {
-  if (isSubmitting.value) return
-  isSubmitting.value = true
-
-  const reservaData = {
-    fecha: fecha.value,
-    destino: destino.value,
-    evento: evento.value,
-    personas: personas.value,
-    cliente: cliente.value,
-    elementos: elementos.value,
-    total: total.value
-  };
-
-  // Guardar en localStorage para el flujo de resumen/pago
-  localStorage.setItem("reservaTemp", JSON.stringify(reservaData));
-
-  // Enviar al backend
-  try {
-    const backendReserva = {
-      salon_id: salonSeleccionado.value || null,
-      nombre_evento: evento.value,
-      fecha_inicio: `${fecha.value}T10:00:00`,
-      fecha_fin: `${fecha.value}T20:00:00`,
-      cliente: cliente.value,
-      personas: personas.value,
-      total: total.value,
-      destino: destino.value,
-      evento: evento.value,
-      elementos: elementos.value
-    }
-    const result = await crearReserva(backendReserva)
-    localStorage.setItem("reservaBackendId", result.id || "")
-  } catch (error) {
-    let msg = 'Error al crear la reserva en el servidor'
-    if (error.response) {
-      const detail = error.response.data?.detail
-      if (typeof detail === 'string') {
-        msg = detail
-      } else if (Array.isArray(detail)) {
-        msg = detail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ')
-      } else if (error.response.status === 401) {
-        msg = 'Debes iniciar sesión para crear una reserva'
-      } else if (error.response.status === 409) {
-        msg = 'Esa fecha ya está ocupada para este salón'
-      } else {
-        msg = `Error del servidor (${error.response.status})`
-      }
-    } else if (error.request) {
-      msg = 'No se pudo conectar con el servidor. Verifica que el backend esté activo.'
-    }
-    isSubmitting.value = false
-    Swal.fire({
-      title: 'Error',
-      text: msg,
-      icon: 'error',
-      confirmButtonColor: '#2e7d32'
-    })
-    return
-  }
-
-  isSubmitting.value = false
-  router.push("/resumen");
-}
-
-async function irCotizacion() {
-  if (isSubmitting.value) return
-  isSubmitting.value = true
-
-  const cotizacionData = {
-    fecha: fecha.value,
-    destino: destino.value,
-    evento: evento.value,
-    personas: personas.value,
-    cliente: cliente.value,
-    elementos: elementos.value,
-    total: total.value,
-    salon_id: salonSeleccionado.value || null
-  };
-
-  localStorage.setItem("cotizacionTemp", JSON.stringify(cotizacionData));
-
-  try {
-    await crearCotizacionFormulario(cotizacionData)
-  } catch (error) {
-    let msg = 'Error al guardar la cotización'
-    if (error.response?.data?.detail) {
-      const detail = error.response.data.detail
-      msg = typeof detail === 'string' ? detail : JSON.stringify(detail)
-    }
-    isSubmitting.value = false
-    Swal.fire({ title: 'Error', text: msg, icon: 'error', confirmButtonColor: '#2e7d32' })
-    return
-  }
-
-  isSubmitting.value = false
-  router.push("/cotizacion");
-}
+})
 </script>
 
 <template>
+  <div style="background-color: var(--color-fondo-cafe);">
+    <TheNarvar />
+  </div>
+
   <main class="reserva-page" :class="{ loaded }">
     <!-- Hero Section with Background Image -->
     <div class="page-hero">
@@ -759,6 +559,7 @@ async function irCotizacion() {
       </form>
     </div>
   </main>
+  <Footer />
 </template>
 
 <style scoped>

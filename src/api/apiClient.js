@@ -1,5 +1,11 @@
 import axios from "axios";
+import apiClient from '@/api/apiClient'
 
+export const enviarReserva = async (datos) => {
+  // Ajusta la ruta '/salones/reservar' según como la tengas en tu router de Python
+    const response = await apiClient.post('/salones/reservar', datos)
+    return response.data
+}
 const base = import.meta.env.VITE_BACKEND_URL;
 
 const apiClient = axios.create({

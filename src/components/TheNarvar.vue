@@ -55,15 +55,20 @@ const logout = () => {
 </template>
 
 <style scoped>
-/* Estilos básicos de los enlaces */
-.navbar-dark .navbar-nav .nav-link {
-    color: rgba(255, 255, 255, 0.8);
-    text-transform: uppercase;
-    font-size: 1rem;
-    margin-right: 20px;
+/* Forzamos el Navbar para que sea oscuro/transparente */
+nav, .navbar {
+  background-color: rgba(30, 40, 30, 0.9) !important; /* Un verde súper oscuro casi negro */
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
-.navbar-dark .navbar-nav .nav-link.active,
-.navbar-dark .navbar-nav .nav-link:hover {
-    color: white;
+
+/* Arreglamos las letras azules por blancas/doradas */
+nav a, .navbar-brand {
+  color: #f1ebd9 !important; /* Color hueso/dorado */
+  text-decoration: none !important;
 }
+
+nav a:hover {
+  color: #d4af37 !important; /* Dorado al pasar el mouse */
+}
+
 </style>
